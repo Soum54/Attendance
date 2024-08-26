@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Attendance Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+        .input-group {
+            margin-bottom: 10px;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th.present {
+            background-color: green;
+            color: white;
+        }
+        th.absent {
+            background-color: red;
+            color: white;
+        }
+        th.od {
+            background-color: blue;
+            color: white;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .results {
+            margin-top: 20px;
+            display: none; /* Initially hidden */
+        }
+        .results h3 {
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+        .results h3 span {
+            font-weight: normal;
+            display: block;
+            margin-top: 10px;
+        }
+        .date-section {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+        .table-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .table-container table {
+            width: 45%; /* Adjusted to fit both tables side by side */
+            margin: 0 10px;
+        }
+        .absentees-header {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .absentees-header h3 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+        #absenteesTable thead th {
+            background-color: red; /* Red background for absentees table heading */
+            color: white;
+        }
+        #onDutyTable thead th {
+            background-color: blue; /* Matching the color of OD */
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        // Initialize the student list in local storage if it doesn't exist
+        const defaultStudents = [
+             "AKALYA .M", "ARWIND RAGAW .S.K",  "GAYATHRI .K", "HARI DHARSHINI .K.G", 
+             "KARTHIKA .H", "MUTHUKUMAR .G",  "NANDHINI .S.R",   "ROSHINI .M",  "SHIVANIE .A", 
+             "SHRI AISHWARYA", "SOUMIYA .A", "SWETHA .P", "THARANI","VASANTHKUMAR .S.R"   
+        ];
+
+        function initializeStudents() {
+            if (!localStorage.getItem('students')) {
+                localStorage.setItem('students', JSON.stringify(defaultStudents.map(name => ({ name, status: null }))));
+            }
+        }
+
+        function updateStudentList() {
+            const students = JSON.parse(localStorage.getItem('students'));
+            const tableBody = document.getElementById('attendanceTableBody');
+            tableBody.innerHTML = '';
+            students.forEach(student => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${student.name}</td>
+                    <td class="present">
+                        <input type="radio" name="${student.name}-status" value="present" ${student.status === 'present' ? 'checked' : ''} onclick="updateAttendance('${student.name}', 'present')">
+                    </td>
+                    <td class="absent">
+                        <input type="radio" name="${student.name}-status" value="absent" ${student.status === 'absent' ? 'checked' : ''} onclick="updateAttendance('${student.name}', 'absent')">
+                    </td>
+                    <td class="od">
+                        <input type="radio" name="${student.name}-status" value="od" ${student.status === 'od' ? 'checked' : ''} onclick="updateAttendance('${student.name}', 'od')">
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        function updateAttendance(name, status) {
+            const students = JSON.parse(localStorage.getItem('students'));
+            const student = students.find(student => student.name === name);
+            if (student) {
+                student.status = status;
+                localStorage.setItem('students', JSON.stringify(students));
+                updateStudentList();
+            }
+        }
+
+        function updateResults() {
+            const students = JSON.parse(localStorage.getItem('students'));
+            const absentees = students.filter(student => student.status === 'absent');
+            const present = students.filter(student => student.status === 'present');
+            const onDuty = students.filter(student => student.status === 'od');
+
+            const absenteesTableBody = document.getElementById('absenteesTableBody');
+            absenteesTableBody.innerHTML = absentees.map(student => `<tr><td>${student.name}</td></tr>`).join('');
+
+            const onDutyTableBody = document.getElementById('onDutyTableBody');
+            onDutyTableBody.innerHTML = onDuty.map(student => `<tr><td>${student.name}</td></tr>`).join('');
+
+            document.getElementById('totalAbsentees').textContent = absentees.length;
+            document.getElementById('totalPresent').textContent = present.length;
+            document.getElementById('totalOD').textContent = onDuty.length;
+            document.getElementById('totalStrength').textContent = students.length;
+
+            // Display current date below the update button and reveal results
+            document.getElementById('currentDateBelow').textContent = `Date: ${getFormattedDate()}`;
+            document.querySelector('.results').style.display = 'block';
+        }
+
+        function getFormattedDate() {
+            const today = new Date();
+            const optionsDate = { year: 'numeric', month: '2-digit', day: '2-digit' };
+            return today.toLocaleDateString(undefined, optionsDate);
+        }
+
+        function getFormattedDay() {
+            const today = new Date();
+            const optionsDay = { weekday: 'long' };
+            return today.toLocaleDateString(undefined, optionsDay);
+        }
+
+        function updateDate() {
+            const dateElement = document.getElementById('currentDateText');
+            const dayElement = document.getElementById('currentDay');
+            dateElement.textContent = `Date: ${getFormattedDate()}`;
+            dayElement.textContent = `Day: ${getFormattedDay()}`;
+        }
+
+        window.onload = function() {
+            initializeStudents();
+            updateStudentList();
+            updateDate();
+        }
+    </script>
+
+    <marquee BEHAVIOR="alternate"><h1>SIT &nbsp;&nbsp; AI-DS Sec "B"</h1></marquee>
+    <marquee BEHAVIOR="alternate">--------------------------------------------------------</marquee>
+
+    <div class="container">
+        <div class="date-section">
+            <div id="currentDateText"></div>
+            <div id="currentDay"></div>
+        </div>
+
+        <center>
+            <h1>Student Attendance Tracker</h1>
+        </center>
+
+        <!-- Attendance Form -->
+        <form>
+            <table id="attendanceTable">
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th class="present">Present</th>
+                        <th class="absent">Absent</th>
+                        <th class="od">OD</th>
+                    </tr>
+                </thead>
+                <tbody id="attendanceTableBody">
+                    <!-- Student attendance options will be populated here -->
+                </tbody>
+            </table>
+            <button type="button" class="button" onclick="updateResults()">Update Results</button>
+            <div id="currentDateBelow" style="margin-top: 20px;"></div> <!-- Display current date below the button -->
+        </form>
+
+        <!-- Results -->
+        <div class="results">
+            <div class="absentees-header">
+                <h3>Absentees List: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; AI-DS Sec 'B'&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; On - Duty List:</h3>      
+            </div>
+            <div class="table-container">
+                <!-- Absentees Table -->
+                <table id="absenteesTable">
+                    <thead>
+                        <tr>
+                            <th>Absentees</th>
+                        </tr>
+                    </thead>
+                    <tbody id="absenteesTableBody">
+                        <!-- Absentee names will be populated here -->
+                    </tbody>
+                </table>
+                
+                <!-- On Duty Table -->
+                <table id="onDutyTable">
+                    <thead>
+                        <tr>
+                            <th class="od">On Duty</th>
+                        </tr>
+                    </thead>
+                    <tbody id="onDutyTableBody">
+                        <!-- On Duty names will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="table-container">
+                <table id="summaryTable">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Total Absentees</td>
+                            <td id="totalAbsentees">0</td>
+                        </tr>
+                        <tr>
+                            <td>Total Present</td>
+                            <td id="totalPresent">0</td>
+                        </tr>
+                        <tr>
+                            <td>Total OD</td>
+                            <td id="totalOD">0</td>
+                        </tr>
+                        <tr>
+                            <td>Total Strength</td>
+                            <td id="totalStrength">0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
